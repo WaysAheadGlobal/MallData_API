@@ -9,7 +9,7 @@ with open("mall.json", "r", encoding="utf-8") as file:
 # -------------------- FastAPI Setup --------------------
 
 app = FastAPI()
-@fastapi_app.get("/api/malls")
+@app.get("/api/malls")
 async def search_malls_fastapi(q: str = Query(default="", description="Search query for malls")):
     if not q:
         # Return only "IBN Buttata Mall" data if no query is provided
