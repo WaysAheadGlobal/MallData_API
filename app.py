@@ -13,7 +13,7 @@ app = FastAPI()
 async def search_malls_fastapi(q: str = Query(default="", description="Search query for malls")):
     if not q:
         # Return only "IBN Buttata Mall" data if no query is provided
-        ibn_buttata_mall = next((mall for mall in mall_data if mall["name"].lower() == "ibn buttata mall"), None)
+        ibn_buttata_mall = next((mall for mall in mall_data if mall["name"].lower() == "ibn battuta mall"), None)
         if ibn_buttata_mall:
             return JSONResponse(content=ibn_buttata_mall)
         raise HTTPException(status_code=404, detail="IBN Buttata Mall not found.")
