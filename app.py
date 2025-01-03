@@ -8,11 +8,8 @@ import uvicorn
 app = Flask(__name__)
 
 # Load mall data from mall.json
-try:
-    with open('mall.json', 'r') as file:
-        mall_data = json.load(file)
-except FileNotFoundError:
-    mall_data = []
+with open("mall.json", "r", encoding="utf-8") as file:
+    mall_data = json.load(file)
 
 # -------------------- Flask API --------------------
 
