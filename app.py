@@ -1,29 +1,90 @@
 import json
-from fastapi import FastAPI, Query, HTTPException
+import pyodbc
+from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
-from fastapi.middleware.wsgi import WSGIMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from datetime import datetime
 import uvicorn
-# Load mall data from mall.json
+
+# ----------------- Database Connection Setup -----------------
+DB_CONNECTION_STRING = (
+    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "SERVER=103.239.89.99,21433;"
+    "DATABASE=RetailMEApp_DB;"
+    "UID=RetailMEAppUsr;"
+    "PWD=App*Retail8usr"
+)
+
+# ----------------- Connect to MSSQL -----------------
+def get_db_connection():
+    return pyodbc.connect(DB_CONNECTION_STRING)
+
+# ----------------- Load Mall Data -----------------
 with open("mall.json", "r", encoding="utf-8") as file:
     mall_data = json.load(file)
-# -------------------- FastAPI Setup --------------------
 
+# ----------------- FastAPI Setup -----------------
 app = FastAPI()
+security = HTTPBasic()
+
+# ----------------- Authentication -----------------
+def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if user exists in the api_keys table
+    cursor.execute(
+        "SELECT email FROM api_keys WHERE email = ? AND api_key = ?",
+        (credentials.username, credentials.password)
+    )
+    user = cursor.fetchone()
+    
+    conn.close()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    return credentials.username
+
+# ----------------- Log API Call -----------------
+def log_api_call(email, endpoint, query, ip_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "INSERT INTO api_logs (email, endpoint, query, ip_address) VALUES (?, ?, ?, ?)",
+        (email, endpoint, query, ip_address)
+    )
+    
+    conn.commit()
+    conn.close()
+
+# ----------------- API Endpoints -----------------
 @app.get("/api/malls")
-async def search_malls_fastapi(q: str = Query(default="", description="Search query for malls")):
+async def search_malls_fastapi(
+    q: str = Query(default="", description="Search query for malls"),
+    request: Request,
+    username: str = Depends(authenticate_user)
+):
+    # Extract IP Address
+    client_ip = request.client.host
+
+    # Log API Call
+    log_api_call(username, "/api/malls", q, client_ip)
+
+    # Mall Query
     if not q:
-        # Return only "IBN Buttata Mall" data if no query is provided
         ibn_buttata_mall = next((mall for mall in mall_data if mall["name"].lower() == "ibn battuta mall"), None)
         if ibn_buttata_mall:
             return JSONResponse(content=ibn_buttata_mall)
         raise HTTPException(status_code=404, detail="IBN Buttata Mall not found.")
     
-    # Filter malls by name
     results = [mall for mall in mall_data if q.lower() in mall["name"].lower()]
     if not results:
         raise HTTPException(status_code=404, detail="No malls found matching the query.")
+    
     return results
-# -------------------- Run Both Apps --------------------
+
+# ----------------- Run the API -----------------
 if __name__ == "__main__":
-    # Run FastAPI with Flask mounted
     uvicorn.run(app, host="127.0.0.1", port=8000)
