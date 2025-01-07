@@ -62,9 +62,9 @@ def log_api_call(email, endpoint, query, ip_address):
 # ----------------- API Endpoints -----------------
 @app.get("/api/malls")
 async def search_malls_fastapi(
-    q: str = Query(default="", description="Search query for malls"),
     request: Request,
-    username: str = Depends(authenticate_user)
+    username: str = Depends(authenticate_user),  # Move this before the default argument
+    q: str = Query(default="", description="Search query for malls")
 ):
     # Extract IP Address
     client_ip = request.client.host
