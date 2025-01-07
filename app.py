@@ -63,11 +63,11 @@ def log_api_call(email, endpoint, query, ip_address):
 @app.get("/api/malls")
 async def search_malls_fastapi(
     request: Request,
-    username: str = Depends(authenticate_user),  # Move this before the default argument
+    username: str = Depends(authenticate_user), 
     q: str = Query(default="", description="Search query for malls")
 ):
-    # Extract IP Address
-    client_ip = request.client.host
+    # Extract IP Address with Fallback
+    client_ip = request.client.host if request.client else request.headers.get("X-Forwarded-For", "unknown")
 
     # Log API Call
     log_api_call(username, "/api/malls", q, client_ip)
